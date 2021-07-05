@@ -1,3 +1,5 @@
+import random
+
 import requests
 import os
 import json
@@ -7,7 +9,6 @@ from pprint import pprint
 from urlextract import URLExtract
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-
 
 PATH = 'C:/Program Files (x86)/chromedriver.exe'
 options = webdriver.ChromeOptions()
@@ -42,47 +43,74 @@ def resolve_bitly_to_mega(bitly_url):
     driver = webdriver.Chrome(executable_path=PATH, options=options, service_log_path='NUL')
 
     # Bitly -> Blogspot
-    blogspot_url = requests.get(bitly_url).url
+    try:
+        blogspot_url = requests.get(bitly_url).url
+    except:
+        print("Could not get link from entry, returning previous entry: ")
+        return return_random_entry()
 
-    # Blogspot -> Linkvertise
-    driver.get(blogspot_url)
-    if 'blogspot' in driver.current_url:
-        time.sleep(13)
-        button = driver.find_element_by_id('link')
+    try:
+        # Blogspot -> Linkvertise
+        driver.get(blogspot_url)
+        if 'blogspot' in driver.current_url:
+            time.sleep(13)
+            button = driver.find_element_by_id('link')
+            button.click()
+        linkvertise_url = driver.current_url
+        if 'linkvertise' not in linkvertise_url:
+            print("Not correct link tree, resolving to previous entry: ")
+            print(f"Returned on unexpected link: {linkvertise_url}")
+            return return_random_entry()
+        print(f"Linkvertise: {linkvertise_url}")
+    except:
+        return return_random_entry()
+
+    try:
+        # Linkvertise -> Pastelink
+        driver.get(linkvertise_bypass_url)
+        text_input = driver.find_element_by_class_name('input_box')
+        text_input.send_keys(linkvertise_url)
+        text_input.send_keys(Keys.RETURN)
+        button = driver.find_element_by_id('submit_btn')
         button.click()
-    linkvertise_url = driver.current_url
-    print(f"Linkvertise: {linkvertise_url}")
+        results = driver.find_element_by_id('results')
+        time.sleep(2)
+        pastelink_url = results.text
+        if 'pastelink' not in pastelink_url:
+            print("Not correct link tree, resolving to previous entry: ")
+            print(f"Returned on unexpected link: {linkvertise_url}")
+            return return_random_entry()
+        print(f"Pastelink: {pastelink_url}")
+    except:
+        return return_random_entry()
 
-    # Linkvertise -> Pastelink
-    driver.get(linkvertise_bypass_url)
-    text_input = driver.find_element_by_class_name('input_box')
-    text_input.send_keys(linkvertise_url)
-    text_input.send_keys(Keys.RETURN)
-    button = driver.find_element_by_id('submit_btn')
-    button.click()
-    results = driver.find_element_by_id('results')
-    time.sleep(2)
-    pastelink_url = results.text
-    print(f"Pastelink: {pastelink_url}")
+    try:
+        # Pastelink -> Bitly
+        driver.get(pastelink_url)
+        text_body = driver.find_element_by_class_name('body-display')
+        urls = ex.find_urls(text_body.text)
+        bitly_url = ''
+        for url in urls:
+            if 'bit.ly' in url:
+                bitly_url = url
+                break
+        if bitly_url == '':
+            return return_random_entry()
+        print(f"Bitly: {bitly_url}")
+    except:
+        return return_random_entry()
 
-    # Pastelink -> Bitly
-    driver.get(pastelink_url)
-    text_body = driver.find_element_by_class_name('body-display')
-    urls = ex.find_urls(text_body.text)
-    bitly_url = ''
-    for url in urls:
-        if 'bit.ly' in url:
-            bitly_url = url
-            break
-
-    print(f"Bitly: {bitly_url}")
-
-    # Bitly -> Mega
-    driver.get(bitly_url)
-    return driver.current_url
-
-    driver.close()
-    driver.quit()
+    try:
+        # Bitly -> Mega
+        driver.get(bitly_url)
+        driver.close()
+        driver.quit()
+        return driver.current_url
+    except:
+        l = return_random_entry()
+        driver.close()
+        driver.quit()
+        return l
 
 
 def add_link_to_cache(unresolved, resolved):
@@ -114,6 +142,14 @@ def pull_link_from_cache(unresolved):
                 return link['resolved']
 
         return False
+
+
+def return_random_entry():
+    with open('./cache.json', 'r') as f:
+        data = json.load(f)
+        link = data[random.randint(0, len(data) - 1)]['resolved']
+        f.close()
+    return link
 
 
 if __name__ == '__main__':
