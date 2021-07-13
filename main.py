@@ -1,12 +1,11 @@
 import discord
 import os
-import json
 import asyncio
 import random
-import requests
 from urlextract import URLExtract
 import selfbot
-import urllib3
+import link_resolver
+
 
 """
 Initialization
@@ -56,13 +55,18 @@ Main Check-Updates Loop
 
 
 async def update_site():
+
+    i = 0
     while True:
+        if i > 10:
+            i = 0
         print("Looping...")
 
         # Get the most recent state of the source channel from the selfbot account
         recent_list = selfbot.retrieve_messages(SOURCE_CHANNEL_ID)
 
         # Compare that to the stored version of the state of the source channel
+
         for server in client.guilds:
             for channel in server.channels:
                 if channel.name == '💾│packs':
@@ -81,42 +85,110 @@ async def update_site():
                     # Parse every message in the recent list
                     message_content = []
                     for message in recent_list:
-                        message_string = message['content']
-                        try:
-                            message_string = message_string.replace('@everyone', '')
-                        except:
-                            print('message did not contain @everyone')
+                        parsed_message = parse_message(message)
 
-                        try:
-                            message_string = message_string.replace('join our groups for more : ', '')
-                        except:
-                            print('message did not have a group ad')
+                        message_data = parse_urls(parsed_message, message)
 
-                        urls = ex.find_urls(message_string)
-                        for url in urls:
-                            if 'pastelink' in url:
-                                message_string = message_string.replace(url, '')
-                            if 'bit.ly' in url:
-                                print(f"Resolving url: {url}")
-                                if selfbot.pull_link_from_cache(url):
-                                    print("pulling link from cache")
-                                    resolved_url = selfbot.pull_link_from_cache(url)
-                                else:
-                                    print("Finding url online")
-                                    resolved_url = selfbot.resolve_bitly_to_mega(url)
-                                    selfbot.add_link_to_cache(url, resolved_url)
+                        if message_data:
+                            parsed_message = message_data[0]
+                            resolved_url = message_data[1]
 
-                        message_string = message_string.replace(url, resolved_url)
-                        if resolved_url not in urls_sent_by_bot:
-                            print(f"Sending new message to server {server.name}: ")
-                            print(f"        {message_string}")
-                            if len(message['attachments']) > 0:
-                                message_string = message_string + '\n' + message['attachments'][0]['url']
-                            await channel.send(message_string)
-                        # Send a new message containing that content
+                            await send_message_to_discord(resolved_url,
+                                                          parsed_message,
+                                                          message,
+                                                          urls_sent_by_bot,
+                                                          server,
+                                                          channel)
+                        else:
+                            print('message urls could not be resolved')
 
+                    if i == 10:
+                        print("Checking for skipped urls in cache")
+                        await check_skipped_urls(channel, urls_sent_by_bot)
+
+            i += 1
         await asyncio.sleep(random.randint(1, 3))
 
+
+def parse_message(msg):
+    message_string = msg['content']
+    try:
+        message_string = message_string.replace('@everyone', '')
+    except:
+        print('message did not contain @everyone')
+
+    try:
+        message_string = message_string.replace('join our groups for more : ', '')
+    except:
+        print('message did not have a group ad')
+
+    return message_string
+
+
+def parse_urls(msg, server_message):
+    urls = ex.find_urls(msg)
+    resolved = False
+    for url in urls:
+        if 'pastelink' in url:
+            msg = msg.replace(url, '')
+        if 'bit.ly' in url:
+            print(f"Resolving url: {url}")
+
+            resolved = resolve_bitly_url(url, server_message)
+            if resolved:
+                msg = msg.replace(url, resolved)
+
+    if not resolved:
+        return False
+
+    return msg, resolved
+
+
+def resolve_bitly_url(url, server_message):
+    cache = selfbot.pull_link_from_cache(url)
+    if cache:
+        if cache == 'cannot resolve':
+            return False
+        return cache
+
+    image = None
+    if len(server_message['attachments']) > 0:
+        image = server_message['attachments'][0]['url']
+
+    res = link_resolver.resolve_link(url)
+    if res:
+        selfbot.add_link_to_cache(url, res, image=image)
+        return res
+
+    selfbot.add_link_to_cache(url, 'cannot resolve')
+    return False
+
+
+async def check_skipped_urls(current_channel, urls_sent_by_bot, include_unresolved=False):
+    cache_list = selfbot.pull_all_data_from_cache()
+
+    messages_to_send = []
+
+    for entry in cache_list:
+        if entry['resolved'] != 'unresolved' and 'image' in list(entry.keys()) and \
+                entry['resolved'] not in urls_sent_by_bot:
+            message = f"{entry['resolved']}" + "\n" \
+                      f"{entry['image']}"
+
+            print("Appending to skipped messages...")
+            messages_to_send.append(message)
+
+    for msg in messages_to_send:
+        await current_channel.send(msg)
+
+
+async def send_message_to_discord(resolved_url, user_message, server_message, urls_sent_by_bot, server, channel):
+    if resolved_url not in urls_sent_by_bot:
+        print(f"Sending new message to server {server.name}: ")
+        print(f"        {user_message}")
+        if len(server_message['attachments']) > 0:
+            message_string = user_message + '\n' + server_message['attachments'][0]['url']
+        await channel.send(message_string)
 
 # Run Bot
 client.loop.create_task(update_site())

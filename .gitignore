@@ -151,3 +151,6 @@ crashlytics-build.properties
 fabric.properties
 
 # Project specific
+cache.json
+spelling_captcha_screenshot.png
+word_captcha_screenshot.png
