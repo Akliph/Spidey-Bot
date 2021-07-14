@@ -7,14 +7,18 @@ import json
 
 def retrieve_messages(channel_id):
     headers = {
-        'authorization': 'ODU4MDM5MzA1MDI5Mjg3OTY2.YNYW_Q.D5Hh5Q8cVWLis5F9r8L52yVQQRs'
+        'authorization': 'ODY0OTc4NTMzMTM4MzAwOTg4.YO9iHw.g8kE1B0WuSAjb4r4hY5MsSl7Bng'
     }
 
     r = requests.get(f'https://discord.com/api/v9/channels/{channel_id}/messages', headers=headers)
 
     response = json.loads(r.text)
 
-    return response
+    try:
+        if response['message'] == '401: Unauthorized':
+            return False
+    except:
+        return response
 
 
 def add_link_to_cache(unresolved, resolved, image=None, message=None):

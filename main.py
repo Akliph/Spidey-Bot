@@ -1,3 +1,5 @@
+import sys
+
 import discord
 import os
 import asyncio
@@ -61,12 +63,22 @@ async def update_site():
 
         # Get the most recent state of the source channel from the selfbot account
         recent_list = selfbot.retrieve_messages(SOURCE_CHANNEL_ID)
+        if not recent_list:
+            print("THE ACCOUNT IN THE PREMIUM NUDE PACKS SERVER HAS BEEN BANNED, "
+                  "PLEASE JOIN ANOTHER ACCOUNT TO THE SERVER AND FIND ITS AUTHORIZATION TOKEN."
+                  "PASTE THAT AUTHORIZATION TOKEN INTO THE VALUE OF 'AUTHORIZATION'")
+            print("")
+            print("AUTHORIZATION IS LOCATED IN SELFBOT.PY UNDER THE 'retrieve_messages' FUNCTION IN THE VARIABLE"
+                  " 'header' dict")
+            sys.exit()
+
+        print(f"Recent List: {recent_list}")
 
         # Compare that to the stored version of the state of the source channel
 
         for server in client.guilds:
             for channel in server.channels:
-                if channel.name == '💾│packs' and server.name == "BotTesting":
+                if channel.name == '💾│packs':
                     # Get a list of all messages sent
                     messages_sent = await channel.history(limit=10000).flatten()
 
@@ -77,11 +89,11 @@ async def update_site():
                             for url in ex.find_urls(message.content):
                                 urls_sent_by_bot.append(url)
 
-                    print(urls_sent_by_bot)
-
                     # Parse every message in the recent list
                     message_content = []
                     for message in recent_list:
+                        print(message)
+                        print(type(message))
                         parsed_message = parse_message(message)
 
                         message_data = parse_urls(parsed_message, message)
