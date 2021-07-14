@@ -2,10 +2,10 @@ import discord
 import os
 import asyncio
 import random
-from urlextract import URLExtract
 import selfbot
 import link_resolver
-
+from urlextract import URLExtract
+from sys import argv
 
 """
 Initialization
@@ -18,6 +18,7 @@ ex = URLExtract()
 client_servers = []
 
 client = discord.Client()
+
 
 if not os.path.isfile('./cache.json'):
     with open('./cache.json', 'w+') as f:
@@ -55,11 +56,7 @@ Main Check-Updates Loop
 
 
 async def update_site():
-
-    i = 0
     while True:
-        if i > 10:
-            i = 0
         print("Looping...")
 
         # Get the most recent state of the source channel from the selfbot account
@@ -69,7 +66,7 @@ async def update_site():
 
         for server in client.guilds:
             for channel in server.channels:
-                if channel.name == '💾│packs':
+                if channel.name == '💾│packs' and server.name == "BotTesting":
                     # Get a list of all messages sent
                     messages_sent = await channel.history(limit=10000).flatten()
 
@@ -102,11 +99,11 @@ async def update_site():
                         else:
                             print('message urls could not be resolved')
 
-                    if i == 10:
-                        print("Checking for skipped urls in cache")
+                        """
+                        print("<-----Checking for skipped urls in cache----->")
                         await check_skipped_urls(channel, urls_sent_by_bot)
+                        """
 
-            i += 1
         await asyncio.sleep(random.randint(1, 3))
 
 
@@ -157,7 +154,7 @@ def resolve_bitly_url(url, server_message):
 
     res = link_resolver.resolve_link(url)
     if res:
-        selfbot.add_link_to_cache(url, res, image=image)
+        selfbot.add_link_to_cache(url, res, image=image, message=server_message['content'])
         return res
 
     selfbot.add_link_to_cache(url, 'cannot resolve')
@@ -169,17 +166,43 @@ async def check_skipped_urls(current_channel, urls_sent_by_bot, include_unresolv
 
     messages_to_send = []
 
+    """
     for entry in cache_list:
-        if entry['resolved'] != 'unresolved' and 'image' in list(entry.keys()) and \
-                entry['resolved'] not in urls_sent_by_bot:
-            message = f"{entry['resolved']}" + "\n" \
-                      f"{entry['image']}"
+        if 'post_cache_without_image' not in argv:
+            if entry['resolved'] != 'cannot resolve' and 'image' in list(entry.keys()) and \
+               entry['resolved'] not in urls_sent_by_bot:
 
-            print("Appending to skipped messages...")
-            messages_to_send.append(message)
+                if 'message' in list(entry.keys()):
+                    message = f"{entry['message']}" + '\n'  \
+                              f"{entry['resolved']}" + "\n" \
+                              f"{entry['image']}"
+                else:
+                    message = f"{entry['resolved']}" + "\n" \
+                              f"{entry['image']}"
 
+                print("Appending to skipped messages...")
+                messages_to_send.append(message)
+        else:
+            if entry['resolved'] != 'cannot resolve' and entry['resolved'] not in urls_sent_by_bot:
+                print("Posting entry with no image")
+                if 'message' in list(entry.keys()) and 'image' in list(entry.keys()):
+                    message = f"{entry['message']}" + '\n' \
+                              f"{entry['resolved']}" + "\n" \
+                              f"{entry['image']}"
+                elif 'message' in list(entry.keys()):
+                    message = f"{entry['message']}" + '\n' \
+                              f"{entry['resolved']}"
+                else:
+                    message = f"{entry['resolved']}"
+
+                print("Appending to skipped messages...")
+                messages_to_send.append(message)
+
+    print(f"Sending Messages: {messages_to_send}")
     for msg in messages_to_send:
         await current_channel.send(msg)
+        print("Message sent...")
+    """
 
 
 async def send_message_to_discord(resolved_url, user_message, server_message, urls_sent_by_bot, server, channel):

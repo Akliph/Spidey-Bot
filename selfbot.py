@@ -17,7 +17,7 @@ def retrieve_messages(channel_id):
     return response
 
 
-def add_link_to_cache(unresolved, resolved, image=None):
+def add_link_to_cache(unresolved, resolved, image=None, message=None):
     with open('./cache.json', 'r+') as f:
         data = json.load(f)
 
@@ -25,7 +25,8 @@ def add_link_to_cache(unresolved, resolved, image=None):
             {
                 'unresolved': unresolved,
                 'resolved': resolved,
-                'image': image
+                'image': image,
+                'message': message
             }
         )
 
@@ -35,7 +36,7 @@ def add_link_to_cache(unresolved, resolved, image=None):
         f.close()
 
 
-def pull_link_from_cache(unresolved, pull_image=False):
+def pull_link_from_cache(unresolved, pull_image=False, pull_content=False):
     with open('./cache.json', 'r') as f:
         if os.stat('./cache.json').st_size == 0:
             return False
