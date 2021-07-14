@@ -7,7 +7,7 @@ import json
 
 def retrieve_messages(channel_id):
     headers = {
-        'authorization': 'ODY0OTc4NTMzMTM4MzAwOTg4.YO9iHw.g8kE1B0WuSAjb4r4hY5MsSl7Bng'
+        'authorization': 'mfa.jwmvF2zAUrhg4Cxd1Xx6_7spTR5k513pPLh4yYAh_hgkpO-YV5hw7rEpBXYNoYqzRJj3F4kUE7YY8qqGLX_S'
     }
 
     r = requests.get(f'https://discord.com/api/v9/channels/{channel_id}/messages', headers=headers)
