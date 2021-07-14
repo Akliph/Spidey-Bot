@@ -11,7 +11,7 @@ from sys import argv
 Initialization
 """
 
-TOKEN = 'ODU4MDA0MzQ2MDQyMzE4ODQ5.YNX00Q.8vEhPteid_rWmFhDADhvNSEnpfk'
+TOKEN = argv[1]
 SOURCE_CHANNEL_ID = 796166200555470878
 ex = URLExtract()
 
