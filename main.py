@@ -72,8 +72,6 @@ async def update_site():
                   " 'header' dict")
             sys.exit()
 
-        print(f"Recent List: {recent_list}")
-
         # Compare that to the stored version of the state of the source channel
 
         for server in client.guilds:
