@@ -64,10 +64,6 @@ async def update_site():
         # Get the most recent state of the source channel from the selfbot account
         recent_list = selfbot.retrieve_messages(SOURCE_CHANNEL_ID)
         if not recent_list:
-            print("THE ACCOUNT IN THE PREMIUM NUDE PACKS SERVER HAS BEEN BANNED, "
-                  "PLEASE JOIN ANOTHER ACCOUNT TO THE SERVER AND FIND ITS AUTHORIZATION TOKEN."
-                  "PASTE THAT AUTHORIZATION TOKEN INTO THE VALUE OF 'AUTHORIZATION'")
-            print("")
             print("AUTHORIZATION IS LOCATED IN SELFBOT.PY UNDER THE 'retrieve_messages' FUNCTION IN THE VARIABLE"
                   " 'header' dict")
             sys.exit()
